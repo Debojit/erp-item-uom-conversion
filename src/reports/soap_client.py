@@ -5,17 +5,21 @@ from zeep.plugins import HistoryPlugin
 from requests import Session
 from requests.auth import HTTPBasicAuth
 
-from abc import ABC, abstractmethod
+from dotenv import load_dotenv
 
-class SoapClient(ABC):
+import os
+
+class SoapClient:
     
-    def __init__(self, wsdl: str, user: str, password: str):
+    def __init__(self, wsdl: str):
         """Initialise a SOAP client with WSDL and optional username and password"""
-        if user.strip() != '' and user != None and password.strip() != '' and password != None:
-            session = Session()
-            session.auth = HTTPBasicAuth(user, password)
+        load_dotenv('../../.env')
+        session = Session()
+        user = os.environ.get('ERP_USER')
+        password = os.environ.get('ERP_PASSWORD')
+        session.auth = HTTPBasicAuth(user, password)
         
-        self.history = HistoryPlugin() #Required for logging SOAP request/response payloads
+        self.history = HistoryPlugin() # Required for logging SOAP request/response payloads
         self.client = Client(wsdl, transport=Transport(session=session), plugins=[self.history])
     
     def get_last_request(self):
