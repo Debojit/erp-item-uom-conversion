@@ -21,6 +21,19 @@
                     },
                     {
                         "multiValuesAllowed": "",
+                        "name": "P_ITEM_CLASS",
+                        "refreshParamOnChange": "",
+                        "selectAll": "",
+                        "templateParam": "",
+                        "useNullForAll": "",
+                        "values": [
+                            {
+                                "item": ""
+                            }
+                        ]
+                    },
+                    {
+                        "multiValuesAllowed": "",
                         "name": "P_MODE",
                         "refreshParamOnChange": "",
                         "selectAll": "",
