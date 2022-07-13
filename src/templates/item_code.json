@@ -1,0 +1,42 @@
+{
+    "reportRequest": {
+        "attributeFormat": "xml",
+        "byPassCache": "",
+        "flattenXML": "false",
+        "parameterNameValues": [
+            {
+                "item": [
+                    {
+                        "multiValuesAllowed": "",
+                        "name": "P_ITEM_CODE",
+                        "refreshParamOnChange": "",
+                        "selectAll": "",
+                        "templateParam": "",
+                        "useNullForAll": "",
+                        "values": [
+                            {
+                                "item": ""
+                            }
+                        ]
+                    },
+                    {
+                        "multiValuesAllowed": "",
+                        "name": "P_MODE",
+                        "refreshParamOnChange": "",
+                        "selectAll": "",
+                        "templateParam": "",
+                        "useNullForAll": "",
+                        "values": [
+                            {
+                                "item": ""
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "reportAbsolutePath": "/Custom/DH Extensions/SCM/DH FB Item UOM Conversions Report.xdo",
+        "sizeOfDataChunkDownload": "-1"
+    },
+    "appParams": ""
+}
