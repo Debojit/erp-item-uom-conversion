@@ -15,9 +15,9 @@ class SoapClient:
         
         if user != None and password != None:
             session.auth:HTTPBasicAuth = HTTPBasicAuth(user, password)
-            self.client:Client = Client(wsdl, transport=Transport(session=session), plugins=[self.history])
+            self.client:Client = Client(wsdl, transport = Transport(session = session), plugins = [self.history])
         else:
-            self.client:Client = Client(wsdl, plugins=[self.history])
+            self.client:Client = Client(wsdl, plugins = [self.history])
     
     def get_last_request(self):
         """Returns latest SOAP request"""

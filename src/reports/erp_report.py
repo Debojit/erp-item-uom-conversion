@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 from .soap_client import SoapClient
 
 import xmltodict
-
 import os
 
 class ErpReportClient(SoapClient):
