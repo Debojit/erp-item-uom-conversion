@@ -11,7 +11,7 @@ class ErpReportClient(SoapClient):
     def __init__(self):
         """Initalise ERP report SOAP client"""
         load_dotenv('../../.env')
-        wsdl:str = 'https://' + os.getenv('ERP_HOST') + ':' + os.getenv('ERP_PORT') + '/xmlpserver/services/ExternalReportWSSService?WSDL'
+        wsdl:str = 'https://' + os.getenv('erp.host') + ':' + os.getenv('erp.port') + '/xmlpserver/services/ExternalReportWSSService?WSDL'
         user:str = os.getenv('erp.user', None)
         password:str = os.getenv('erp.password', None)
         SoapClient.__init__(self, wsdl, user, password)
