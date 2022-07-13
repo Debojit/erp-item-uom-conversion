@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 
-from soap_client import SoapClient
+from .soap_client import SoapClient
 
 import xmltodict
 

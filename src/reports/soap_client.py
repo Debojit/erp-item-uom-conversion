@@ -5,10 +5,6 @@ from zeep.plugins import HistoryPlugin
 from requests import Session
 from requests.auth import HTTPBasicAuth
 
-from dotenv import load_dotenv
-
-import os
-
 class SoapClient:
     
     def __init__(self, wsdl: str, user:str = None, password:str = None):
