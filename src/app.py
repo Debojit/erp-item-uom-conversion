@@ -1,5 +1,5 @@
 from reports.erp_report import ErpReportClient
-from  api import erp_api_client as api
+from api import erp_api_client as api
 
 from typing import List, Dict
 from argparse import ArgumentParser, Namespace
@@ -14,36 +14,62 @@ def _convert_intraclass(report: dict) -> List[Dict]:
 
     if(type(data) == dict):
         data = [data]
+
     response_buffer = []
     error_items = [item for item in data if item['ERROR_FLAG'] == 'Y']
     for item in data:
         if item in error_items:
-            continue
+            continue # TODO: Load to response buffer
         else:
-            item_id:str = item['INVENTORY_ITEM_ID']
-            uom_code:str = item['UOM_CODE']
-            inverse_flag:str = item['INVERSE']
-            conversion_value:float = float(item['CONV_VALUE'])
-            conversion_rate:float = float(item['CONVERSION_RATE'])
+            item_id: str = item['INVENTORY_ITEM_ID']
+            item_number: str = item['ITEM_NUMBER']
+            item_desc: str = item['DESCRIPTION']
+            uom_code: str = item['UOM_CODE']
+            from_uom_name: str = item['UNIT_OF_MEASURE']
+            to_uom_name: str = item['BASE_UOM_NAME']
+            inverse_flag: str = item['INVERSE']
+            conversion_value: float = float(item['CONV_VALUE'])
+            conversion_rate: float = float(item['CONVERSION_RATE'])
 
             if inverse_flag == 'Yes':
                 intraclass_conv = 1 / (conversion_value * conversion_rate)
             if inverse_flag == 'No':
                 intraclass_conv = conversion_value * conversion_rate
-            
-            # Call Intraclass Conversion Create API
-            intraclass_conv_data = api.get_intraclass_conversions(uom_code, item_id)
+
+            # Fetch Intraclass conversions for item
+            intraclass_conv_data = \
+                api.get_intraclass_conversions(uom_code, item_id)
             # Check if conversion data exists. If exists, call update API
             if intraclass_conv_data['status_code'] == 200 and intraclass_conv_data['data'] != {}:
-                conversion_data:Dict = intraclass_conv_data['data']
-                current_intraclass_conv:float = conversion_data['conversion_value']
+                conversion_data: Dict = intraclass_conv_data['data']
+                current_intraclass_conv: float = conversion_data['conversion_value']
                 if current_intraclass_conv != intraclass_conv:
-                    conversion_id:int = conversion_data['conversion_id']
-                    #conversion_update_data:Dict = api.update_intraclass_conversion(conversion_id, uom_code, item_id, intraclass_conv)
-            else: # If does not exist, call create API
-                pass
-
-
+                    conversion_id: int = conversion_data['conversion_id']
+                    conversion_update_data: Dict = \
+                        api.update_intraclass_conversion(conversion_id, uom_code, item_id, intraclass_conv)
+                    if conversion_update_data['status_code'] == 200:
+                        response_buffer.append({
+                            'item_number': item_number,
+                            'item_desc': item_desc,
+                            'conv_type': 'Intraclass',
+                            'from_uom': from_uom_name,
+                            'conversion': conversion_update_data['conversion_value'],
+                            'to_uom': to_uom_name,
+                            'status': 'Success'
+                        })
+                    else:
+                        response_buffer.append({
+                            'item_number': item_number,
+                            'item_desc': item_desc,
+                            'conv_type': 'Intraclass',
+                            'from_uom': from_uom_name,
+                            'conversion': intraclass_conv,
+                            'to_uom': to_uom_name,
+                            'status': 'Error',
+                            'error_message': conversion_update_data['error']
+                        })
+            else:  # If does not exist, call create API
+                pass # TODO: Call Create API
 
 
 def item_uom_conversion(item_number: str, item_class: str) -> None:
