@@ -1,4 +1,5 @@
 import resource
+from urllib import response
 from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
 import requests
@@ -30,8 +31,7 @@ def get_intraclass_conversions(uom_code: str, item_id: int) -> Dict:
 
     resource_url: str = f'/fscmRestApi/resources/11.13.18.05/unitsOfMeasure/{uom_code}/child/intraclassConversions?q=InventoryItemId={item_id}&onlyData=true'
     try:
-        status_code, response_payload = _invoke_api(
-            verb='GET', resource_url=resource_url)
+        status_code, response_payload = _invoke_api(verb='GET', resource_url=resource_url)
         if len(response_payload['items']) > 0:
             response_item = response_payload['items'][0]
             return {
@@ -55,17 +55,42 @@ def get_intraclass_conversions(uom_code: str, item_id: int) -> Dict:
         }
 
 
+def create_intraclass_conversion(uom_code: str, item_id, conv_value: float) -> Dict:
+    """Create new intraclass conversion"""
+
+    resource_url: str = f'/fscmRestApi/resources/11.13.18.05/unitsOfMeasure/{uom_code}/child/intraclassConversions'
+    request_payload: Dict = {
+        'InventoryItemId': item_id,
+        'IntraclassConversion': conv_value
+    }
+
+    try:
+        status_code, response_payload = _invoke_api(verb='POST', resource_url=resource_url, payload=request_payload)
+        return {
+            'status_code': status_code,
+            'data': {
+                'conversion_id': response_payload['ConversionId'],
+                'item_id': response_payload['InventoryItemId'],
+                'item_number': response_payload['ItemNumber'],
+                'conversion_value': response_payload['IntraclassConversion']
+            }
+        }
+    except requests.exceptions.HTTPError as httpe:
+        return {
+            'status_code': httpe.response.status_code,
+            'error': httpe.response.text
+        }
+
 def update_intraclass_conversion(conv_id: int, uom_code: str, item_id: int, conv_value: float) -> Dict:
     """Update intraclass conversion for an item"""
 
     resource_url: str = f'/fscmRestApi/resources/11.13.18.05/unitsOfMeasure/{uom_code}/child/intraclassConversions/{conv_id}'
-    request_payload: dict = {
+    request_payload: Dict = {
         'InventoryItemId': item_id,
         'IntraclassConversion': conv_value
     }
     try:
-        status_code, response_payload = _invoke_api(
-            verb='PATCH', resource_url=resource_url, payload=request_payload)
+        status_code, response_payload = _invoke_api(verb='PATCH', resource_url=resource_url, payload=request_payload)
         return {
             'status_code': status_code,
             'data': {
