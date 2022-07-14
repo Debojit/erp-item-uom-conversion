@@ -32,16 +32,22 @@ def get_intraclass_conversions(uom_code: str, item_id: int) -> Dict:
     try:
         status_code, response_payload = _invoke_api(
             verb='GET', resource_url=resource_url)
-        response_item = response_payload['items'][0]
-        return {
-            'status_code': status_code,
-            'data': {
-                'conversion_id': response_item['ConversionId'],
-                'item_id': response_item['InventoryItemId'],
-                'item_number': response_item['ItemNumber'],
-                'conversion_value': response_item['IntraclassConversion']
+        if len(response_payload['items']) > 0:
+            response_item = response_payload['items'][0]
+            return {
+                'status_code': status_code,
+                'data': {
+                    'conversion_id': response_item['ConversionId'],
+                    'item_id': response_item['InventoryItemId'],
+                    'item_number': response_item['ItemNumber'],
+                    'conversion_value': response_item['IntraclassConversion']
+                }
             }
-        }
+        else:
+            return {
+                'status_code': status_code,
+                'data': {}
+            }
     except requests.exceptions.HTTPError as httpe:
         return {
             'status_code': httpe.response.status_code,
