@@ -32,14 +32,20 @@ def get_intraclass_conversions(uom_code: str, item_id: int) -> Dict:
     try:
         status_code, response_payload = _invoke_api(
             verb='GET', resource_url=resource_url)
+        response_item = response_payload['items'][0]
         return {
             'status_code': status_code,
-            'data': response_payload['items']
+            'data': {
+                'conversion_id': response_item['ConversionId'],
+                'item_id': response_item['InventoryItemId'],
+                'item_number': response_item['ItemNumber'],
+                'conversion_value': response_item['IntraclassConversion']
+            }
         }
     except requests.exceptions.HTTPError as httpe:
         return {
             'status_code': httpe.response.status_code,
-            'error': f'Invalid UOM Code {uom_code}'
+            'error': f'Invalid UOM Code {uom_code} and Item ID {item_id} combination'
         }
 
 
@@ -56,7 +62,12 @@ def update_intraclass_conversion(conv_id: int, uom_code: str, item_id: int, conv
             verb='PATCH', resource_url=resource_url, payload=request_payload)
         return {
             'status_code': status_code,
-            'data': response_payload
+            'data': {
+                'conversion_id': response_payload['ConversionId'],
+                'item_id': response_payload['InventoryItemId'],
+                'item_number': response_payload['ItemNumber'],
+                'conversion_value': response_payload['IntraclassConversion']
+            }
         }
     except requests.exceptions.HTTPError as httpe:
         return {
