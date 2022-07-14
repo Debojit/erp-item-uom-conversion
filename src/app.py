@@ -1,4 +1,5 @@
 from reports.erp_report import ErpReportClient
+from  api import erp_api_client as api
 
 from argparse import ArgumentParser, Namespace
 
@@ -17,19 +18,22 @@ def _convert_intraclass(report: dict) -> None:
         if item in error_items:
             pass
         else:
-            item_number = item['ITEM_NUMBER']
-            to_base_uom_code = item['UOM']
-            from_base_uom_code = item['BASE_UOM_CODE']
-            inverse_flag = item['INVERSE']
-            conversion_value = float(item['CONV_VALUE'])
-            conversion_rate = float(item['CONVERSION_RATE'])
+            item_id:str = item['INVENTORY_ITEM_ID']
+            uom_code:str = item['UOM_CODE']
+            inverse_flag:str = item['INVERSE']
+            conversion_value:float = float(item['CONV_VALUE'])
+            conversion_rate:float = float(item['CONVERSION_RATE'])
 
             if inverse_flag == 'Yes':
                 conversion_value = 1 / (conversion_value * conversion_rate)
             if inverse_flag == 'No':
                 conversion_value = conversion_value * conversion_rate
             
-            # Call Intraclass Convertsion Create API
+            # Call Intraclass Conversion Create API
+            ## Check if conversion exists
+            print(api.get_intraclass_conversions(uom_code, item_id))
+
+
 
 def item_uom_conversion(item_number: str, item_class: str) -> None:
     """Create Item UOM conversion data for item number and/or class"""
