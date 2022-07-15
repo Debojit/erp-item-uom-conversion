@@ -1,5 +1,5 @@
 from reports.erp_report import ErpReportClient
-from api import erp_api_client as api
+from api import erp_api_client as client
 
 from typing import List, Dict
 from argparse import ArgumentParser, Namespace
@@ -15,8 +15,8 @@ def _convert_intraclass(report: dict) -> List[Dict]:
     if(type(data) == dict):
         data = [data]
 
-    response_buffer = []
-    error_items = [item for item in data if item['ERROR_FLAG'] == 'Y']
+    response_buffer:List[Dict] = []
+    error_items:List = [item for item in data if item['ERROR_FLAG'] == 'Y']
     for item in data:
         if item in error_items:
             continue # TODO: Load to response buffer
@@ -38,22 +38,38 @@ def _convert_intraclass(report: dict) -> List[Dict]:
 
             # Fetch Intraclass conversions for item
             intraclass_conv_data = \
-                api.get_intraclass_conversions(uom_code, item_id)
-            # Check if conversion data exists. If exists, call update API
-            if intraclass_conv_data['status_code'] == 200 and intraclass_conv_data['data'] != {}:
+                client.get_intraclass_conversions(uom_code, item_id)
+
+            # Check if conversion data exists.
+            if intraclass_conv_data['status_code'] == 200 \
+                and intraclass_conv_data['data'] != {}:
                 conversion_data: Dict = intraclass_conv_data['data']
                 current_intraclass_conv: float = conversion_data['conversion_value']
-                if current_intraclass_conv != intraclass_conv:
+
+                # If conversion data exists and is identical to existing conversion data,
+                # skip to next conversion item
+                if current_intraclass_conv == intraclass_conv:
+                    response_buffer.append({
+                            'item_number': item_number,
+                            'item_desc': item_desc,
+                            'conv_type': 'Intraclass',
+                            'from_uom': from_uom_name,
+                            'conversion': current_intraclass_conv,
+                            'to_uom': to_uom_name,
+                            'status': 'Conversion Value Unchanged; Skipping'
+                        })
+                    continue
+                else:
                     conversion_id: int = conversion_data['conversion_id']
                     conversion_update_data: Dict = \
-                        api.update_intraclass_conversion(conversion_id, uom_code, item_id, intraclass_conv)
+                        client.update_intraclass_conversion(conversion_id, uom_code, item_id, intraclass_conv)
                     if conversion_update_data['status_code'] == 200:
                         response_buffer.append({
                             'item_number': item_number,
                             'item_desc': item_desc,
                             'conv_type': 'Intraclass',
                             'from_uom': from_uom_name,
-                            'conversion': conversion_update_data['conversion_value'],
+                            'conversion': conversion_update_data['data']['conversion_value'],
                             'to_uom': to_uom_name,
                             'status': 'Success'
                         })
@@ -68,8 +84,31 @@ def _convert_intraclass(report: dict) -> List[Dict]:
                             'status': 'Error',
                             'error_message': conversion_update_data['error']
                         })
-            else:  # If does not exist, call create API
-                pass # TODO: Call Create API
+            else:  # If conversion does not exist, call create API
+                conversion_create_data = \
+                    client.create_intraclass_conversion(uom_code, item_id, intraclass_conv)
+                if conversion_create_data['status_code'] == 201:
+                    response_buffer.append({
+                            'item_number': item_number,
+                            'item_desc': item_desc,
+                            'conv_type': 'Intraclass',
+                            'from_uom': from_uom_name,
+                            'conversion': conversion_create_data['data']['conversion_value'],
+                            'to_uom': to_uom_name,
+                            'status': 'Success'
+                        })
+                else:
+                    response_buffer.append({
+                            'item_number': item_number,
+                            'item_desc': item_desc,
+                            'conv_type': 'Intraclass',
+                            'from_uom': from_uom_name,
+                            'conversion': intraclass_conv,
+                            'to_uom': to_uom_name,
+                            'status': 'Error',
+                            'error_message': conversion_create_data['error']
+                        })
+    return response_buffer
 
 
 def item_uom_conversion(item_number: str, item_class: str) -> None:
