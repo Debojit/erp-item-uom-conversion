@@ -53,7 +53,7 @@ def get_intraclass_conversions(uom_code: str, item_id: int) -> Dict:
         }
 
 
-def create_intraclass_conversion(uom_code: str, item_id, conv_value: float) -> Dict:
+def create_intraclass_conversion(uom_code: str, item_id: int, conv_value: float) -> Dict:
     """Create new intraclass conversion"""
 
     resource_url: str = f'/fscmRestApi/resources/11.13.18.05/unitsOfMeasure/{uom_code}/child/intraclassConversions'
@@ -143,6 +143,34 @@ def update_interclass_conversion(uom_code: str, conversion_id: int, from_uom: st
     }
     try:
         status_code, response_payload = _invoke_api(verb='PATCH', resource_url=resource_url, payload=request_payload)
+        return {
+            'status_code': status_code,
+            'data': {
+                'conversion_id': response_payload['InterclassConversionId'],
+                'item_id': response_payload['InventoryItemId'],
+                'item_number': response_payload['ItemNumber'],
+                'conversion_value': response_payload['InterclassConversion']
+            }
+        }
+    except requests.exceptions.HTTPError as httpe:
+        return {
+            'status_code': httpe.response.status_code,
+            'error': httpe.response.text
+        }
+
+def create_interclass_conversion(uom_class: str, item_number: str, from_uom: str, to_uom:str, conv_value: float) -> Dict:
+    """Create new interclass conversion"""
+
+    resource_url: str = f'/fscmRestApi/resources/11.13.18.05/unitOfMeasureClasses/{uom_class}/child/interclassConversions'
+    request_payload: Dict = {  
+        "ItemNumber" : item_number, 
+        "FromUOMCode" : from_uom, 
+        "ToUOMCode" : to_uom, 
+        "InterclassConversion" : conv_value
+    }
+
+    try:
+        status_code, response_payload = _invoke_api(verb='POST', resource_url=resource_url, payload=request_payload)
         return {
             'status_code': status_code,
             'data': {
