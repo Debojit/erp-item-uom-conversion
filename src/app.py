@@ -108,12 +108,61 @@ def _convert_interclass(conversion: Dict) -> List[Dict]:
     from_uom_name: str = conversion['FROM_UOM_NAME']
     to_uom_code: str = conversion['TO_UOM_CODE']
     to_uom_name: str = conversion['TO_UOM_NAME']
+    primary_uom_class: str = conversion['ITEM_PRIMARY_UOM_CLASS_CODE']
     conversion_value: float = float(conversion['UOM_CONV_VALUE'])
     from_conveersion_rate:float = float(conversion['FROM_CONV_RATE'])
     to_conversion_rate: float = float(conversion['TO_CONV_RATE'])
 
-    conversion_output = from_conveersion_rate / (conversion_value * to_conversion_rate)
-    response_buffer:List[Dict] = []
+    interclass_conversion = from_conveersion_rate / (conversion_value * to_conversion_rate)
+
+    # Check if conversion exists
+    interclass_conv_data: Dict = \
+        client.get_interclass_conversions(primary_uom_class, item_id, from_uom_code, to_uom_code)
+    
+    if interclass_conv_data['status_code'] == 200 and \
+        interclass_conv_data['data'] != {}:
+        conversion_data: Dict = interclass_conv_data['data']
+        current_interclass_conv: float = conversion_data['conversion_value']
+
+        # If conversion exists and conversion value equals new conversion value,
+        # skip conversion item
+        if current_interclass_conv == interclass_conversion:
+            return {
+                'item_number': item_number,
+                'item_desc': item_desc,
+                'conv_type': 'Interclass',
+                'from_uom': from_uom_name,
+                'conversion': current_interclass_conv,
+                'to_uom': to_uom_name,
+                'status': 'Conversion unchanged; skipped'
+            }
+        else:
+            conversion_id = conversion_data['conversion_id']
+            conversion_update_data: Dict = \
+                client.update_interclass_conversion(primary_uom_class, conversion_id, from_uom_code, to_uom_code, interclass_conversion)
+            if conversion_update_data['status_code'] == 200:
+                return {
+                    'item_number': item_number,
+                    'item_desc': item_desc,
+                    'conv_type': 'Interclass',
+                    'from_uom': from_uom_name,
+                    'conversion': conversion_update_data['data']['conversion_value'],
+                    'to_uom': to_uom_name,
+                    'status': 'Success'
+                }
+            else:
+                return {
+                    'item_number': item_number,
+                    'item_desc': item_desc,
+                    'conv_type': 'Interclass',
+                    'from_uom': from_uom_name,
+                    'conversion': interclass_conversion,
+                    'to_uom': to_uom_name,
+                    'status': 'Error',
+                    'error_message': conversion_update_data['error']
+                }
+    else: # If conversion does not exist, create new interclass conversion
+        pass
 
 
 def item_uom_conversion(item_number: str, item_class: str) -> None:
