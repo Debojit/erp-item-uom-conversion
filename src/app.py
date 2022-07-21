@@ -101,7 +101,18 @@ def _convert_intraclass(conversion: Dict) -> Dict:
 def _convert_interclass(conversion: Dict) -> List[Dict]:
     """Calculate interclass UOM conversion(s) and load to ERP"""
 
-    print(conversion)
+    item_id: str = conversion['INVENTORY_ITEM_ID']
+    item_number: str = conversion['ITEM_NUMBER']
+    item_desc: str = conversion['DESCRIPTION']
+    from_uom_code: str = conversion['FROM_UOM_CODE']
+    from_uom_name: str = conversion['FROM_UOM_NAME']
+    to_uom_code: str = conversion['TO_UOM_CODE']
+    to_uom_name: str = conversion['TO_UOM_NAME']
+    conversion_value: float = float(conversion['UOM_CONV_VALUE'])
+    from_conveersion_rate:float = float(conversion['FROM_CONV_RATE'])
+    to_conversion_rate: float = float(conversion['TO_CONV_RATE'])
+
+    conversion_output = from_conveersion_rate / (conversion_value * to_conversion_rate)
     response_buffer:List[Dict] = []
 
 
