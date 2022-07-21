@@ -1,3 +1,4 @@
+import resource
 from requests.auth import HTTPBasicAuth
 import requests
 
@@ -130,4 +131,29 @@ def get_interclass_conversions(uom_code: str, item_id: int, from_uom: str, to_uo
         return {
             'status_code': httpe.response.status_code,
             'error': f'Inerclass conversion not found for UOM Code {uom_code} and Item ID {item_id} combination'
+        }
+
+def update_interclass_conversion(uom_code: str, conversion_id: int, from_uom: str, to_uom:str, conv_value: float):
+    """Update Interclass conversion for an item"""
+    resource_url:str = f'/fscmRestApi/resources/11.13.18.05/unitOfMeasureClasses/{uom_code}/child/interclassConversions/{conversion_id}'
+    request_payload: Dict = {
+        "FromUOMCode": from_uom,
+        "ToUOMCode": to_uom,
+        "InterclassConversion": conv_value
+    }
+    try:
+        status_code, response_payload = _invoke_api(verb='PATCH', resource_url=resource_url, payload=request_payload)
+        return {
+            'status_code': status_code,
+            'data': {
+                'conversion_id': response_payload['InterclassConversionId'],
+                'item_id': response_payload['InventoryItemId'],
+                'item_number': response_payload['ItemNumber'],
+                'conversion_value': response_payload['InterclassConversion']
+            }
+        }
+    except requests.exceptions.HTTPError as httpe:
+        return {
+            'status_code': httpe.response.status_code,
+            'error': httpe.response.text
         }
