@@ -197,7 +197,7 @@ def _convert_interclass(conversion: Dict) -> List[Dict]:
             }
 
 
-def item_uom_conversion(item_number: str, item_class: str) -> None:
+def item_uom_conversion(item_number: str, item_class: str) -> Dict:
     """Create Item UOM conversion data for item number and/or class"""
 
     # Convert Intraclass
@@ -245,34 +245,11 @@ def item_uom_conversion(item_number: str, item_class: str) -> None:
             interclass_conversions.append(conversion_data)
     except KeyError:
         pass
-
-    # Format Output
-    table_headers_success = ['Item Number', 'Description', 'Conversion Type',
-                             'From Base UOM', 'Conversion', 'To Base UOM', 'Message']
-    table_headers_error = ['Item Number', 'Description', 'Conversion Type',
-                           'From Base UOM', 'Conversion', 'To Base UOM', 'Error Message']
-
-    interclass_conv_success: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
-                                      item['conversion'], item['to_uom'], item['message']] for item in interclass_conversions if item['status'] == 'Success']
-    interclass_conv_error: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
-                                    item['conversion'], item['to_uom'], item['status']] for item in interclass_conversions if item['status'] == 'Error']
-
-    intraclass_conv_success: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
-                                      item['conversion'], item['to_uom'], item['message']] for item in intraclass_conversions if item['status'] == 'Success']
-    intraclass_conv_error: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
-                                    item['conversion'], item['to_uom'], item['status']] for item in intraclass_conversions if item['status'] == 'Error']
-
-    print('--Intraclass Conversions--')
-    print(tabulate(intraclass_conv_success,
-          headers=table_headers_success, tablefmt="grid"))
-    print(tabulate(intraclass_conv_error,
-          headers=table_headers_error, tablefmt="grid"))
-    print('--Interclass Conversions--')
-    print(tabulate(interclass_conv_success,
-          headers=table_headers_success, tablefmt="grid"))
-    print(tabulate(interclass_conv_error,
-          headers=table_headers_error, tablefmt="grid"))
-
+    
+    return {
+        'intraclass_conversions': intraclass_conversions,
+        'interclass_conversions': interclass_conversions
+    }
 
 if __name__ == '__main__':
     # Parse command-line arguments
@@ -285,4 +262,34 @@ if __name__ == '__main__':
     args: Namespace = parser.parse_args()
 
     # Invoke conversion function
-    item_uom_conversion(args.item_number, args.item_class)
+    conversion_data: Dict = item_uom_conversion(args.item_number, args.item_class)
+
+    # Format Output
+    table_headers_success = ['Item Number', 'Description', 'Conversion Type',
+                             'From Base UOM', 'Conversion', 'To Base UOM', 'Message']
+    table_headers_error = ['Item Number', 'Description', 'Conversion Type',
+                           'From Base UOM', 'Conversion', 'To Base UOM', 'Error Message']
+    
+    intraclass_conversions: List = conversion_data['intraclass_conversions']
+    intraclass_conv_success: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
+                                      item['conversion'], item['to_uom'], item['message']] for item in intraclass_conversions if item['status'] == 'Success']
+    intraclass_conv_error: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
+                                    item['conversion'], item['to_uom'], item['status']] for item in intraclass_conversions if item['status'] == 'Error']
+
+    interclass_conversions: List = conversion_data['interclass_conversions']
+    interclass_conv_success: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
+                                      item['conversion'], item['to_uom'], item['message']] for item in interclass_conversions if item['status'] == 'Success']
+    interclass_conv_error: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
+                                    item['conversion'], item['to_uom'], item['status']] for item in interclass_conversions if item['status'] == 'Error']
+
+    print('--Intraclass Conversions--')
+    print(tabulate(intraclass_conv_success,
+          headers=table_headers_success, tablefmt="grid"))
+    print(tabulate(intraclass_conv_error,
+          headers=table_headers_error, tablefmt="grid"))
+    print('--Interclass Conversions--')
+    print(tabulate(interclass_conv_success,
+          headers=table_headers_success, tablefmt="grid"))
+    print(tabulate(interclass_conv_error,
+          headers=table_headers_error, tablefmt="grid"))
+
