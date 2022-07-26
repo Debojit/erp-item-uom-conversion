@@ -112,7 +112,8 @@ def _convert_interclass(conversion: Dict) -> List[Dict]:
     conversion_value: float = float(conversion['UOM_CONV_VALUE'])
     from_conveersion_rate:float = float(conversion['FROM_CONV_RATE'])
     to_conversion_rate: float = float(conversion['TO_CONV_RATE'])
-
+    to_uom_class: str = conversion['TO_CLASS_NAME']
+    
     interclass_conversion = from_conveersion_rate / (conversion_value * to_conversion_rate)
 
     # Check if conversion exists
@@ -161,8 +162,30 @@ def _convert_interclass(conversion: Dict) -> List[Dict]:
                     'status': 'Error',
                     'error_message': conversion_update_data['error']
                 }
-    else: # If conversion does not exist, create new interclass conversion
-        pass
+    else:
+        conversion_create_data: Dict = \
+            client.create_interclass_conversion(to_uom_class, item_number, from_uom_code, to_uom_code, interclass_conversion)
+        if conversion_create_data['status_code'] == 200:
+            return {
+                    'item_number': item_number,
+                    'item_desc': item_desc,
+                    'conv_type': 'Interclass',
+                    'from_uom': from_uom_name,
+                    'conversion': conversion_create_data['data']['conversion_value'],
+                    'to_uom': to_uom_name,
+                    'status': 'Success'
+                }
+        else:
+            return {
+                'item_number': item_number,
+                'item_desc': item_desc,
+                'conv_type': 'Interclass',
+                'from_uom': from_uom_name,
+                'conversion': interclass_conversion,
+                'to_uom': to_uom_name,
+                'status': 'Error',
+                'error_message': conversion_create_data['error']
+            }
 
 
 def item_uom_conversion(item_number: str, item_class: str) -> None:
