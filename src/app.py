@@ -1,12 +1,18 @@
 from reports.erp_report import ErpReportClient
 from api import erp_api_client as client
 
+from tabulate import tabulate
+
 from typing import List, Dict
 from argparse import ArgumentParser, Namespace
 
-from tabulate import tabulate
 import json
+import sys
 
+from flask import Flask, request
+
+
+app = Flask(__name__)
 
 def _convert_intraclass(conversion: Dict) -> Dict:
     """Calculate intraclass UOM conversion(s) and load to ERP"""
@@ -196,23 +202,33 @@ def _convert_interclass(conversion: Dict) -> List[Dict]:
                 'error_message': conversion_create_data['error']
             }
 
-
-def item_uom_conversion(item_number: str, item_class: str) -> Dict:
+@app.route('/item-uom-conv', methods=['POST'])
+def item_uom_conversion(item_number: str = None, item_class: str = None) -> Dict:
     """Create Item UOM conversion data for item number and/or class"""
 
+    return_code = 200
     # Convert Intraclass
     # Create request payload
     template_path = 'templates/item_code.json'
-    with open(template_path) as request_template:
-        request = json.load(request_template)
-    if item_number != None or item_class != None:
-        request['reportRequest']['parameterNameValues'][0]['item'][0]['values'][0]['item'] = item_number
-        request['reportRequest']['parameterNameValues'][0]['item'][1]['values'][0]['item'] = item_class
-        request['reportRequest']['parameterNameValues'][0]['item'][2]['values'][0]['item'] = 'INTRACLASS'
+    with open(template_path) as request_template_file:
+        request_template = json.load(request_template_file)
+    if item_number == None and item_class == None:
+        payload = request.json
+        if 'itemNumber' in payload or 'itemClass' in payload:
+            item_number = payload['itemNumber'] if 'itemNumber' in payload else None
+            item_class = payload['itemClass'] if 'itemClass' in payload else None
+        else:
+            return 'Both item number and item class cannot be empty', 400
+    
+    request_template['reportRequest']['parameterNameValues'][0]['item'][0]['values'][0]['item'] = item_number
+    request_template['reportRequest']['parameterNameValues'][0]['item'][1]['values'][0]['item'] = item_class
+    request_template['reportRequest']['parameterNameValues'][0]['item'][2]['values'][0]['item'] = 'INTRACLASS'
+
+    print(request_template)
 
     client = ErpReportClient()
     # Convert Intraclass
-    intraclass_report = client.run_report(request)
+    intraclass_report = client.run_report(request_template)
     intraclass_conversions: List[Dict] = []
     try:
         intraclass_data: List[Dict] = intraclass_report['DATA_DS']['G_1']
@@ -235,8 +251,8 @@ def item_uom_conversion(item_number: str, item_class: str) -> Dict:
         pass
 
     # Convert Interclass
-    request['reportRequest']['parameterNameValues'][0]['item'][2]['values'][0]['item'] = 'INTERCLASS'
-    interclass_report = client.run_report(request)
+    request_template['reportRequest']['parameterNameValues'][0]['item'][2]['values'][0]['item'] = 'INTERCLASS'
+    interclass_report = client.run_report(request_template)
     interclass_conversions: List[Dict] = []
     try:
         interclass_data: List[Dict] = interclass_report['DATA_DS']['G_2']
@@ -249,47 +265,54 @@ def item_uom_conversion(item_number: str, item_class: str) -> Dict:
     return {
         'intraclass_conversions': intraclass_conversions,
         'interclass_conversions': interclass_conversions
-    }
+    }, return_code
 
 if __name__ == '__main__':
-    # Parse command-line arguments
-    parser = ArgumentParser()
-    requried_args = parser.add_argument_group('required named arguments')
-    requried_args.add_argument('-i', '--item-number', type=str,
-                               help='Number of the item created in Fusion ERP. e.g. FDF-500013')
-    requried_args.add_argument('-c', '--item-class', type=str,
-                               help='Class of the item as defined in Fusion ERP.')
-    args: Namespace = parser.parse_args()
+    print(len(sys.argv))
+    if len(sys.argv) == 1:
+        try:
+            app.run(debug=True)
+        except KeyboardInterrupt:
+            print('Exiting...')
+            sys.exit()
+    else:
+        # Parse command-line arguments
+        parser = ArgumentParser()
+        requried_args = parser.add_argument_group('required named arguments')
+        requried_args.add_argument('-i', '--item-number', type=str,
+                                help='Number of the item created in Fusion ERP. e.g. FDF-500013')
+        requried_args.add_argument('-c', '--item-class', type=str,
+                                help='Class of the item as defined in Fusion ERP.')
+        args: Namespace = parser.parse_args()
 
-    # Invoke conversion function
-    conversion_data: Dict = item_uom_conversion(args.item_number, args.item_class)
+        # Invoke conversion function
+        conversion_data: Dict = item_uom_conversion(args.item_number, args.item_class)
 
-    # Format Output
-    table_headers_success = ['Item Number', 'Description', 'Conversion Type',
-                             'From Base UOM', 'Conversion', 'To Base UOM', 'Message']
-    table_headers_error = ['Item Number', 'Description', 'Conversion Type',
-                           'From Base UOM', 'Conversion', 'To Base UOM', 'Error Message']
-    
-    intraclass_conversions: List = conversion_data['intraclass_conversions']
-    intraclass_conv_success: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
-                                      item['conversion'], item['to_uom'], item['message']] for item in intraclass_conversions if item['status'] == 'Success']
-    intraclass_conv_error: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
-                                    item['conversion'], item['to_uom'], item['status']] for item in intraclass_conversions if item['status'] == 'Error']
+        # Format Output
+        table_headers_success = ['Item Number', 'Description', 'Conversion Type',
+                                'From Base UOM', 'Conversion', 'To Base UOM', 'Message']
+        table_headers_error = ['Item Number', 'Description', 'Conversion Type',
+                            'From Base UOM', 'Conversion', 'To Base UOM', 'Error Message']
+        
+        intraclass_conversions: List = conversion_data['intraclass_conversions']
+        intraclass_conv_success: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
+                                        item['conversion'], item['to_uom'], item['message']] for item in intraclass_conversions if item['status'] == 'Success']
+        intraclass_conv_error: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
+                                        item['conversion'], item['to_uom'], item['status']] for item in intraclass_conversions if item['status'] == 'Error']
 
-    interclass_conversions: List = conversion_data['interclass_conversions']
-    interclass_conv_success: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
-                                      item['conversion'], item['to_uom'], item['message']] for item in interclass_conversions if item['status'] == 'Success']
-    interclass_conv_error: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
-                                    item['conversion'], item['to_uom'], item['status']] for item in interclass_conversions if item['status'] == 'Error']
+        interclass_conversions: List = conversion_data['interclass_conversions']
+        interclass_conv_success: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
+                                        item['conversion'], item['to_uom'], item['message']] for item in interclass_conversions if item['status'] == 'Success']
+        interclass_conv_error: List = [[item['item_number'], item['item_desc'], item['conv_type'], item['from_uom'],
+                                        item['conversion'], item['to_uom'], item['status']] for item in interclass_conversions if item['status'] == 'Error']
 
-    print('--Intraclass Conversions--')
-    print(tabulate(intraclass_conv_success,
-          headers=table_headers_success, tablefmt="grid"))
-    print(tabulate(intraclass_conv_error,
-          headers=table_headers_error, tablefmt="grid"))
-    print('--Interclass Conversions--')
-    print(tabulate(interclass_conv_success,
-          headers=table_headers_success, tablefmt="grid"))
-    print(tabulate(interclass_conv_error,
-          headers=table_headers_error, tablefmt="grid"))
-
+        print('--Intraclass Conversions--')
+        print(tabulate(intraclass_conv_success,
+            headers=table_headers_success, tablefmt="grid"))
+        print(tabulate(intraclass_conv_error,
+            headers=table_headers_error, tablefmt="grid"))
+        print('--Interclass Conversions--')
+        print(tabulate(interclass_conv_success,
+            headers=table_headers_success, tablefmt="grid"))
+        print(tabulate(interclass_conv_error,
+            headers=table_headers_error, tablefmt="grid"))
